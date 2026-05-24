@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  # MongoDB
+  mongodb:
+    image: mongo:7
+    container_name: rustep-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+      MONGO_INITDB_DATABASE: rustep
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - rustep-network
+
+  # PostgreSQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: rustep-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: rustep
+      POSTGRES_PASSWORD: rustep123
+      POSTGRES_DB: rustep_postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - rustep-network
+
+  # Redis (Optional - for caching)
+  redis:
+    image: redis:7-alpine
+    container_name: rustep-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - rustep-network
+
+  # Backend API
+  api:
+    build: .
+    container_name: rustep-api
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      MONGODB_URI: mongodb://admin:admin123@mongodb:27017/rustep?authSource=admin
+      DATABASE_URL: postgresql://rustep:rustep123@postgres:5432/rustep_postgres?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      - mongodb
+      - postgres
+      - redis
+    networks:
+      - rustep-network
+    volumes:
+      - ./src:/app/src
+      - ./models:/app/models
+
+volumes:
+  mongodb_data:
+  postgres_data:
+  redis_data:
+
+networks:
+  rustep-network:
+    driver: bridge
