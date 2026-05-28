@@ -93,8 +93,6 @@ const userSchema = new mongoose.Schema({
 });
 
 // Indexes
-userSchema.index({ email: 1 });
-userSchema.index({ googleId: 1 });
 userSchema.index({ createdAt: -1 });
 
 // Virtual for total career steps (can be calculated from steps_log)
