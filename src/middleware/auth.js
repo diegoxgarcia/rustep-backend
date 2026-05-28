@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const config = require('../config/env.config');
 const AppError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
-const User = require('../models/User');
+const User = require('../../models/User');
 
 /**
  * Protect routes - verify JWT token
