@@ -24,8 +24,14 @@ const app = express();
 app.use(helmet());
 
 // CORS
+// Mobile apps (Android/iOS) don't send an Origin header — allow them through.
+// Browser clients are checked against the allowedOrigins whitelist.
 app.use(cors({
-  origin: config.allowedOrigins,
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // mobile app or server-to-server
+    if (config.allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
   credentials: true
 }));
 

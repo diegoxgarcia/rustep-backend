@@ -2,6 +2,49 @@ const { prisma } = require('../../config/postgres.config');
 const config = require('../../config/env.config');
 
 /**
+ * Derive gpsVarianceMeters and avgSpeedKmh from raw GPS points array.
+ * Each point: { lat, lng, timestamp }
+ */
+exports.deriveGpsMetrics = (gpsPoints, sessionStart, sessionEnd) => {
+  if (!gpsPoints || gpsPoints.length < 2) {
+    return { gpsVarianceMeters: null, avgSpeedKmh: null };
+  }
+
+  // Haversine distance between two lat/lng points (returns meters)
+  const haversine = (lat1, lng1, lat2, lng2) => {
+    const R = 6371000;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLng = (lng2 - lng1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2
+      + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  };
+
+  // Total distance
+  let totalDistanceMeters = 0;
+  const distances = [];
+  for (let i = 1; i < gpsPoints.length; i++) {
+    const d = haversine(
+      gpsPoints[i - 1].lat, gpsPoints[i - 1].lng,
+      gpsPoints[i].lat,     gpsPoints[i].lng
+    );
+    distances.push(d);
+    totalDistanceMeters += d;
+  }
+
+  // Variance = std dev of segment distances
+  const meanDist = totalDistanceMeters / distances.length;
+  const variance = distances.reduce((s, d) => s + (d - meanDist) ** 2, 0) / distances.length;
+  const gpsVarianceMeters = Math.sqrt(variance);
+
+  // Avg speed from total distance / session duration
+  const durationHours = (sessionEnd - sessionStart) / (1000 * 3600);
+  const avgSpeedKmh   = durationHours > 0 ? (totalDistanceMeters / 1000) / durationHours : null;
+
+  return { gpsVarianceMeters, avgSpeedKmh };
+};
+
+/**
  * Calculate confidence score for fraud detection
  */
 exports.calculateConfidenceScore = (sessionData) => {
