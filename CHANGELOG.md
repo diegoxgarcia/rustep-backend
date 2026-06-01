@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.0] - 2026-05-31
+
+### Added — Mobile App Support
+
+#### Steps Module
+- `POST /api/v1/steps/sync` — batch sync endpoint (principal para la app mobile). Acepta array de hasta 50 sesiones de Health Connect en un solo request. Devuelve `{sessionsProcessed, stepsAccepted, staminaCredited, staminaInQuarantine, warnings}`.
+- `GET /api/v1/steps/weekly-summary` — resumen de la semana ISO actual: pasos totales, progreso hacia umbral de torneos (`WEEKLY_STEPS_THRESHOLD`, default 14.000), stamina ganada, días activos consecutivos.
+- `stepsService.deriveGpsMetrics(gpsPoints, start, end)` — calcula `gpsVarianceMeters` y `avgSpeedKmh` desde array de puntos GPS `{lat, lng, timestamp}` usando Haversine. Usado cuando el cliente envía puntos crudos en vez de métricas pre-computadas.
+
+#### Response shape unificada
+- `POST /api/v1/steps` (single session legacy) ahora devuelve el mismo shape que el batch sync para consistencia.
+
+#### CORS
+- Requests sin header `Origin` (apps nativas Android/iOS) ahora permitidos explícitamente. Clientes browser siguen validándose contra `ALLOWED_ORIGINS`.
+
+### Changed
+- `POST /api/v1/steps` response cambió de `{stepsLog: {...}}` a `{sessionsProcessed, stepsAccepted, staminaCredited, staminaInQuarantine, warnings}`.
+
+---
+
 ## [1.0.0] - 2024-05-24
 
 ### Added - Initial Release

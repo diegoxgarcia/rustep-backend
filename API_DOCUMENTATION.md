@@ -2,7 +2,10 @@
 
 Complete API reference for Rustep backend.
 
-Base URL: `http://localhost:3000/api/v1`
+Base URL: `https://rustep-backend.onrender.com/api/v1` (producción)
+Base URL local: `http://localhost:3000/api/v1`
+
+> **Nota CORS:** Las apps móviles nativas (Android/iOS) no envían header `Origin` — el servidor las permite explícitamente. Los clientes browser se validan contra `ALLOWED_ORIGINS`.
 
 ## Authentication
 
@@ -164,47 +167,136 @@ Authorization: Bearer <your-jwt-token>
 
 ## Steps Module
 
-### Submit Steps Session
+### Sync Steps — Batch ⭐ (endpoint principal para la app mobile)
+
+**Endpoint:** `POST /steps/sync`
+
+Acepta hasta 50 sesiones en un solo request. Diseñado para el flujo de Health Connect donde se leen múltiples sesiones de una vez.
+
+**Rate limit:** 10 requests / hora / usuario
+
+**Request:**
+```json
+{
+  "sessions": [
+    {
+      "stepsCount": 3420,
+      "startTime": "2026-05-31T08:00:00Z",
+      "endTime": "2026-05-31T08:45:00Z",
+      "gpsPoints": [
+        { "lat": -34.603, "lng": -58.381, "timestamp": "2026-05-31T08:00:00Z" },
+        { "lat": -34.608, "lng": -58.375, "timestamp": "2026-05-31T08:15:00Z" }
+      ]
+    },
+    {
+      "stepsCount": 1200,
+      "startTime": "2026-05-31T12:00:00Z",
+      "endTime": "2026-05-31T12:20:00Z",
+      "gpsVarianceMeters": 180,
+      "avgSpeedKmh": 6.2
+    }
+  ]
+}
+```
+
+> **GPS:** Podés enviar `gpsPoints` (lat/lng/timestamp) **o** los valores ya computados `gpsVarianceMeters` + `avgSpeedKmh`. Si enviás `gpsPoints`, el servidor calcula las métricas con Haversine. Si no hay GPS disponible, omitir ambos.
+
+**Response:** (200 OK)
+```json
+{
+  "success": true,
+  "message": "Steps sync completed",
+  "data": {
+    "sessionsProcessed": 2,
+    "stepsAccepted": 4620,
+    "staminaCredited": 46,
+    "staminaInQuarantine": 0,
+    "warnings": []
+  }
+}
+```
+
+**`warnings`** posibles:
+- `SESSION_VALIDATION_FAILED` — sesión bloqueada por velocidad GPS imposible u otro indicador extremo. El usuario debería ver un mensaje de error para esa sesión.
+
+**Confidence Status (interno, no expuesto al usuario):**
+- `valid`: Score >= 0.7 → stamina acreditada inmediatamente
+- `suspicious`: 0.4 <= Score < 0.7 → sesión guardada, sin stamina (silencioso)
+- `blocked`: Score < 0.4 → `SESSION_VALIDATION_FAILED` en `warnings`
+
+---
+
+### Submit Steps — Single session (legacy)
 
 **Endpoint:** `POST /steps`
+
+Mantiene retrocompatibilidad. Para nuevas integraciones usar `POST /steps/sync`.
 
 **Request:**
 ```json
 {
   "stepsCount": 5000,
-  "startTime": "2024-05-24T10:00:00Z",
-  "endTime": "2024-05-24T10:45:00Z",
+  "startTime": "2026-05-31T10:00:00Z",
+  "endTime": "2026-05-31T10:45:00Z",
   "gpsVarianceMeters": 250,
   "avgSpeedKmh": 8.5,
   "stepsDistribution": [
     { "minute": 1, "steps": 110 },
-    { "minute": 2, "steps": 115 },
-    { "minute": 3, "steps": 112 }
+    { "minute": 2, "steps": 115 }
   ]
 }
 ```
 
-**Response:** (201 Created)
+**Response:** (201 Created) — mismo shape que batch sync:
 ```json
 {
   "success": true,
   "message": "Steps submitted successfully",
   "data": {
-    "stepsLog": {
-      "id": "507f1f77bcf86cd799439011",
-      "stepsCount": 5000,
-      "confidenceScore": 0.85,
-      "confidenceStatus": "valid",
-      "staminaCredited": 50
-    }
+    "sessionsProcessed": 1,
+    "stepsAccepted": 5000,
+    "staminaCredited": 50,
+    "staminaInQuarantine": 0,
+    "warnings": []
   }
 }
 ```
 
-**Confidence Status:**
-- `valid`: Score >= 0.7 (stamina credited)
-- `suspicious`: 0.4 <= Score < 0.7 (flagged for review)
-- `blocked`: Score < 0.4 (no stamina)
+---
+
+### Weekly Summary ⭐ (para la pantalla principal de la app)
+
+**Endpoint:** `GET /steps/weekly-summary`
+
+Devuelve el resumen de la semana ISO actual: pasos acumulados, progreso hacia el umbral de torneos, racha de días activos.
+
+**Response:** (200 OK)
+```json
+{
+  "success": true,
+  "message": "Weekly summary retrieved successfully",
+  "data": {
+    "weekNumber": 22,
+    "year": 2026,
+    "totalSteps": 8430,
+    "tournamentThreshold": 14000,
+    "thresholdProgress": 0.6021,
+    "staminaEarned": 84,
+    "sessionsCount": 3,
+    "consecutiveActiveDays": 7,
+    "gracePeriodActive": false
+  }
+}
+```
+
+| Campo | Descripción |
+|---|---|
+| `tournamentThreshold` | Pasos necesarios para clasificar a torneos semanales (configurable con `WEEKLY_STEPS_THRESHOLD`, default 14000) |
+| `thresholdProgress` | Ratio `totalSteps / tournamentThreshold`, capped en 1.0 |
+| `consecutiveActiveDays` | Días consecutivos desde hoy hacia atrás con al menos una sesión no-bloqueada |
+| `gracePeriodActive` | Siempre `false` en Fase 1. Se implementa en Fase 2. |
+
+---
 
 ### Get Today's Steps
 
