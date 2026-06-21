@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] - 2026-06-17
+
+### Added — Daily steps model (podómetro)
+
+- `POST /api/v1/steps/daily` — endpoint principal para pasos del contador diario. Recibe `{ days: [{date, steps}] }` (total acumulado por día, máx 31 días). Hace **upsert por (usuario, día)**: un solo `steps_log` por día (`source: "daily"`) y acredita stamina **solo sobre el delta** del total, evitando duplicados al re-sincronizar un día que sigue creciendo.
+- `StepsLog.source` (`'session' | 'daily'`, default `'session'`) + índice `{userId, source, startTime}` para el upsert.
+- `stepsService.creditStaminaForDailyDelta(userId, oldTotal, newTotal, refId)` — crédito exacto por incremento: `stamina(newTotal) − stamina(oldTotal)`, respetando el tope diario.
+
+### Notes
+
+- Motivo: Health Connect almacena pasos como muchos `StepsRecord` (intervalos), no como sesiones. La app móvil ahora lee el **total agregado por día** y lo sincroniza por este endpoint. `POST /steps/sync` (sesiones/ejercicio) y `POST /steps` (legacy) se mantienen.
+
+---
+
 ## [1.1.0] - 2026-05-31
 
 ### Added — Mobile App Support

@@ -226,6 +226,56 @@ Acepta hasta 50 sesiones en un solo request. Diseñado para el flujo de Health C
 
 ---
 
+### Sync Daily Steps ⭐ (endpoint principal para pasos del podómetro)
+
+**Endpoint:** `POST /steps/daily`
+
+Modelo recomendado para pasos del **contador diario** (Health Connect / HealthKit). Health Connect no
+guarda "sesiones" de pasos sino muchos `StepsRecord` (intervalos con un conteo); la app lee el **total
+por día** y lo envía acá. El backend hace **upsert por (usuario, día)**: mantiene un solo `steps_log`
+por día (`source: "daily"`) y acredita stamina **solo sobre el incremento** del total, así re-sincronizar
+el mismo día a medida que crece **nunca duplica** pasos ni stamina.
+
+**Rate limit:** 10 requests / hora / usuario
+
+**Request:**
+```json
+{
+  "days": [
+    { "date": "2026-06-17", "steps": 12546 },
+    { "date": "2026-06-16", "steps": 8430 }
+  ]
+}
+```
+
+> `date` en formato `YYYY-MM-DD` (fecha local del dispositivo). `steps` es el **total acumulado** del día
+> (0–100000). Máximo 31 días por request.
+
+**Response:** (200 OK)
+```json
+{
+  "success": true,
+  "message": "Daily steps synced",
+  "data": {
+    "sessionsProcessed": 2,
+    "stepsAccepted": 4116,
+    "staminaCredited": 40,
+    "staminaInQuarantine": 0,
+    "warnings": []
+  }
+}
+```
+
+| Campo | Significado en el modelo diario |
+|---|---|
+| `sessionsProcessed` | Cantidad de **días** procesados |
+| `stepsAccepted` | Suma de los **incrementos** (delta) aplicados sobre los días enviados |
+| `staminaCredited` | Stamina acreditada por esos incrementos (respeta el tope diario) |
+
+**`warnings`** posibles: `INVALID_DATE`, `IMPLAUSIBLE_DAILY_STEPS` (steps fuera de 0–100000).
+
+---
+
 ### Submit Steps — Single session (legacy)
 
 **Endpoint:** `POST /steps`

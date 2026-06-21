@@ -48,6 +48,13 @@ const stepsLogSchema = new mongoose.Schema({
     enum: ['valid', 'suspicious', 'blocked'],
     default: 'valid'
   },
+  // 'session' = a discrete workout/run submission; 'daily' = a per-day steps aggregate
+  // (one upserted doc per day, built from Health Connect daily totals).
+  source: {
+    type: String,
+    enum: ['session', 'daily'],
+    default: 'session'
+  },
   gpsVarianceMeters: {
     type: Number,
     default: null
@@ -76,6 +83,8 @@ const stepsLogSchema = new mongoose.Schema({
 // Compound indexes
 stepsLogSchema.index({ userId: 1, startTime: -1 });
 stepsLogSchema.index({ userId: 1, confidenceStatus: 1 });
+// Upsert lookup for the per-day aggregate doc
+stepsLogSchema.index({ userId: 1, source: 1, startTime: 1 });
 stepsLogSchema.index({ startTime: 1 });
 stepsLogSchema.index({ confidenceStatus: 1 });
 

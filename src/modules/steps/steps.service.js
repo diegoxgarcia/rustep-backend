@@ -181,6 +181,50 @@ exports.creditStamina = async (userId, stepsCount, stepsLogId) => {
 };
 
 /**
+ * Credit stamina for the INCREMENT of a day's running step total (daily aggregate model).
+ * Uses exact cumulative math so re-syncing the same day never double-credits:
+ *   credit = stamina(newTotal) - stamina(oldTotal), capped by the daily limit.
+ */
+exports.creditStaminaForDailyDelta = async (userId, oldTotal, newTotal, stepsLogId) => {
+  const perK = config.stamina.perThousandSteps;
+  const staminaTarget =
+    Math.floor(newTotal / 1000) * perK - Math.floor(oldTotal / 1000) * perK;
+
+  if (staminaTarget <= 0) {
+    return 0;
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const todayCredits = await prisma.staminaLedger.aggregate({
+    where: { userId: userId.toString(), type: 'STEPS_CREDIT', createdAt: { gte: today } },
+    _sum: { amount: true }
+  });
+
+  const currentDailyStamina = todayCredits._sum.amount || 0;
+  const availableStamina = config.stamina.maxPerDay - currentDailyStamina;
+
+  if (availableStamina <= 0) {
+    return 0;
+  }
+
+  const finalStamina = Math.min(staminaTarget, availableStamina);
+
+  await prisma.staminaLedger.create({
+    data: {
+      userId: userId.toString(),
+      amount: finalStamina,
+      type: 'STEPS_CREDIT',
+      referenceId: stepsLogId.toString(),
+      description: `Daily steps total ${newTotal}`
+    }
+  });
+
+  return finalStamina;
+};
+
+/**
  * Get ISO week number
  */
 exports.getWeekNumber = (date) => {

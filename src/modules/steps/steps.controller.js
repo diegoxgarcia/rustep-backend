@@ -120,6 +120,83 @@ exports.syncSteps = catchAsync(async (req, res, next) => {
 });
 
 // ─────────────────────────────────────────────────────────────
+// POST /api/v1/steps/daily  (per-day step totals — primary path for the mobile app)
+// Body: { days: [{ date: "YYYY-MM-DD", steps: 12546 }] }
+// Upserts ONE steps_log per (user, day) and credits stamina only on the positive delta,
+// so re-syncing a day as its total grows never duplicates steps or stamina.
+// ─────────────────────────────────────────────────────────────
+exports.syncDailySteps = catchAsync(async (req, res, next) => {
+  const userId = req.user._id;
+  const days = req.body.days;
+
+  if (!Array.isArray(days) || days.length === 0) {
+    return next(new AppError('days must be a non-empty array', 400));
+  }
+  if (days.length > 31) {
+    return next(new AppError('Maximum 31 days per request', 400));
+  }
+
+  let daysProcessed = 0;
+  let stepsAccepted = 0;
+  let staminaCredited = 0;
+  const warnings = [];
+
+  for (const day of days) {
+    const steps = Number(day.steps);
+    const dayStart = new Date(`${day.date}T00:00:00.000Z`);
+
+    if (isNaN(dayStart.getTime())) { warnings.push('INVALID_DATE'); continue; }
+    if (!Number.isFinite(steps) || steps < 0 || steps > 100000) {
+      warnings.push('IMPLAUSIBLE_DAILY_STEPS');
+      continue;
+    }
+
+    const dayEnd = new Date(dayStart);
+    dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
+
+    let log = await StepsLog.findOne({ userId, source: 'daily', startTime: dayStart });
+    const oldTotal = log ? log.stepsCount : 0;
+    const delta = steps - oldTotal;
+
+    daysProcessed++;
+    if (delta <= 0) continue; // nothing new for this day
+
+    if (!log) {
+      log = await StepsLog.create({
+        userId,
+        stepsCount: steps,
+        startTime: dayStart,
+        endTime: dayEnd,
+        confidenceScore: 1,
+        confidenceStatus: 'valid',
+        source: 'daily'
+      });
+    } else {
+      log.stepsCount = steps;
+      await log.save();
+    }
+
+    const credited = await stepsService.creditStaminaForDailyDelta(userId, oldTotal, steps, log._id);
+    if (credited > 0) {
+      log.staminaCredited = (log.staminaCredited || 0) + credited;
+      log.staminaCreditedAt = new Date();
+      await log.save();
+    }
+
+    stepsAccepted += delta;
+    staminaCredited += credited;
+  }
+
+  successResponse(res, {
+    sessionsProcessed: daysProcessed,
+    stepsAccepted,
+    staminaCredited,
+    staminaInQuarantine: 0,
+    warnings
+  }, 'Daily steps synced', 200);
+});
+
+// ─────────────────────────────────────────────────────────────
 // POST /api/v1/steps  (single session — legacy, kept for compatibility)
 // ─────────────────────────────────────────────────────────────
 exports.submitSteps = catchAsync(async (req, res, next) => {

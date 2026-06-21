@@ -43,6 +43,25 @@ router.post(
   stepsController.syncSteps
 );
 
+// ── Daily totals (mobile primary endpoint — Health Connect daily aggregates) ──
+router.post(
+  '/daily',
+  stepsLimiter,
+  [
+    body('days')
+      .isArray({ min: 1, max: 31 })
+      .withMessage('days must be an array of 1–31 items'),
+    body('days.*.date')
+      .notEmpty().withMessage('date is required')
+      .matches(/^\d{4}-\d{2}-\d{2}$/).withMessage('date must be YYYY-MM-DD'),
+    body('days.*.steps')
+      .isInt({ min: 0, max: 100000 })
+      .withMessage('Each day steps must be between 0 and 100000')
+  ],
+  validate,
+  stepsController.syncDailySteps
+);
+
 // ── Weekly summary (mobile home screen flower widget) ─────────────────────
 router.get('/weekly-summary', stepsController.getWeeklySummary);
 
