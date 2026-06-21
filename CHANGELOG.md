@@ -15,9 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `StepsLog.source` (`'session' | 'daily'`, default `'session'`) + índice `{userId, source, startTime}` para el upsert.
 - `stepsService.creditStaminaForDailyDelta(userId, oldTotal, newTotal, refId)` — crédito exacto por incremento: `stamina(newTotal) − stamina(oldTotal)`, respetando el tope diario.
 
+### Fixed
+
+- `StepsLog`: `sessionDurationMinutes` ahora se calcula en un hook `pre('validate')` (antes era `pre('save')`, que corre **después** de la validación → fallaba con "Path `sessionDurationMinutes` is required" al crear documentos en `POST /steps/daily` y `POST /steps/sync`).
+
 ### Notes
 
 - Motivo: Health Connect almacena pasos como muchos `StepsRecord` (intervalos), no como sesiones. La app móvil ahora lee el **total agregado por día** y lo sincroniza por este endpoint. `POST /steps/sync` (sesiones/ejercicio) y `POST /steps` (legacy) se mantienen.
+- Conversión a stamina: **1 stamina cada 1000 pasos** (`STAMINA_PER_1K_STEPS=10`), tope **100/día**. Menos de 1000 pasos acredita 0.
 
 ---
 
