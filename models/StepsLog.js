@@ -88,10 +88,12 @@ stepsLogSchema.index({ userId: 1, source: 1, startTime: 1 });
 stepsLogSchema.index({ startTime: 1 });
 stepsLogSchema.index({ confidenceStatus: 1 });
 
-// Pre-save hook to calculate session duration
-stepsLogSchema.pre('save', function(next) {
-  if (this.isNew || this.isModified('startTime') || this.isModified('endTime')) {
-    const duration = (this.endTime - this.startTime) / (1000 * 60); // Convert to minutes
+// Compute session duration BEFORE validation (pre 'save' runs after validation, so a required
+// sessionDurationMinutes would fail to validate on create).
+stepsLogSchema.pre('validate', function(next) {
+  if (this.startTime && this.endTime &&
+      (this.isNew || this.isModified('startTime') || this.isModified('endTime'))) {
+    const duration = (this.endTime - this.startTime) / (1000 * 60); // minutes
     this.sessionDurationMinutes = Math.max(1, Math.round(duration));
   }
   next();
