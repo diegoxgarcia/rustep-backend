@@ -334,7 +334,16 @@ Devuelve el resumen de la semana ISO actual: pasos acumulados, progreso hacia el
     "staminaEarned": 84,
     "sessionsCount": 3,
     "consecutiveActiveDays": 7,
-    "gracePeriodActive": false
+    "gracePeriodActive": false,
+    "dailyBreakdown": [
+      { "date": "2026-06-15", "steps": 1200 },
+      { "date": "2026-06-16", "steps": 0 },
+      { "date": "2026-06-17", "steps": 2300 },
+      { "date": "2026-06-18", "steps": 1830 },
+      { "date": "2026-06-19", "steps": 900 },
+      { "date": "2026-06-20", "steps": 0 },
+      { "date": "2026-06-21", "steps": 2200 }
+    ]
   }
 }
 ```
@@ -345,6 +354,7 @@ Devuelve el resumen de la semana ISO actual: pasos acumulados, progreso hacia el
 | `thresholdProgress` | Ratio `totalSteps / tournamentThreshold`, capped en 1.0 |
 | `consecutiveActiveDays` | Días consecutivos desde hoy hacia atrás con al menos una sesión no-bloqueada |
 | `gracePeriodActive` | Siempre `false` en Fase 1. Se implementa en Fase 2. |
+| `dailyBreakdown` | Array de los **7 días** de la semana ISO actual (`{date, steps}`), para el gráfico semanal. |
 
 ---
 

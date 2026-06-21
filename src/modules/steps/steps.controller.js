@@ -265,6 +265,20 @@ exports.getWeeklySummary = catchAsync(async (req, res, next) => {
   // Grace period: if user completed threshold last week, they get 1 extra day
   const gracePeriodActive = false; // TODO: implement in Fase 2
 
+  // Per-day breakdown for the 7 days of the ISO week (for the weekly chart)
+  const dailyMap = {};
+  weekLogs.forEach(l => {
+    const key = l.startTime.toISOString().slice(0, 10);
+    dailyMap[key] = (dailyMap[key] || 0) + l.stepsCount;
+  });
+  const dailyBreakdown = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekStart);
+    d.setUTCDate(d.getUTCDate() + i);
+    const key = d.toISOString().slice(0, 10);
+    dailyBreakdown.push({ date: key, steps: dailyMap[key] || 0 });
+  }
+
   successResponse(res, {
     weekNumber,
     year,
@@ -274,7 +288,8 @@ exports.getWeeklySummary = catchAsync(async (req, res, next) => {
     staminaEarned,
     sessionsCount,
     consecutiveActiveDays,
-    gracePeriodActive
+    gracePeriodActive,
+    dailyBreakdown
   }, 'Weekly summary retrieved successfully');
 });
 

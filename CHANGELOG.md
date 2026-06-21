@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `StepsLog.source` (`'session' | 'daily'`, default `'session'`) + índice `{userId, source, startTime}` para el upsert.
 - `stepsService.creditStaminaForDailyDelta(userId, oldTotal, newTotal, refId)` — crédito exacto por incremento: `stamina(newTotal) − stamina(oldTotal)`, respetando el tope diario.
 
+### Changed
+
+- `GET /steps/weekly-summary` ahora incluye `dailyBreakdown`: array de los 7 días de la semana ISO (`{date, steps}`), para el gráfico semanal de la app.
+
 ### Fixed
 
 - `StepsLog`: `sessionDurationMinutes` ahora se calcula en un hook `pre('validate')` (antes era `pre('save')`, que corre **después** de la validación → fallaba con "Path `sessionDurationMinutes` is required" al crear documentos en `POST /steps/daily` y `POST /steps/sync`).
