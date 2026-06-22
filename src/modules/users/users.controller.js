@@ -111,11 +111,12 @@ exports.searchUsers = catchAsync(async (req, res, next) => {
   const users = await User.find({
     $or: [
       { displayName: { $regex: query, $options: 'i' } },
-      { email: { $regex: query, $options: 'i' } }
+      { email: { $regex: query, $options: 'i' } },
+      { friendCode: query.toUpperCase() }
     ],
     accountStatus: 'active'
   })
-    .select('displayName email photoUrl city country')
+    .select('displayName email photoUrl city country friendCode')
     .limit(parseInt(limit));
 
   successResponse(res, { users }, 'Users found');

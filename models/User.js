@@ -85,6 +85,13 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['active', 'suspended', 'banned'],
     default: 'active'
+  },
+  // Short shareable code to add this user as a friend. Generated lazily; unique.
+  friendCode: {
+    type: String,
+    unique: true,
+    sparse: true,
+    uppercase: true
   }
 }, {
   timestamps: true,

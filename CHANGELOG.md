@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `StepsLog.source` (`'session' | 'daily'`, default `'session'`) + índice `{userId, source, startTime}` para el upsert.
 - `stepsService.creditStaminaForDailyDelta(userId, oldTotal, newTotal, refId)` — crédito exacto por incremento: `stamina(newTotal) − stamina(oldTotal)`, respetando el tope diario.
 
+### Added — Friend code
+
+- `User.friendCode`: código corto único y compartible (formato `RUS-XXXXXX`, charset sin caracteres ambiguos). Se genera **lazy** en `GET /auth/me` (cubre usuarios existentes y nuevos) y se devuelve en ese endpoint.
+- `GET /users/search` ahora matchea también por `friendCode` (exacto) y lo incluye en los resultados → se puede agregar a alguien por su código.
+
 ### Changed
 
 - `GET /steps/weekly-summary` ahora incluye `dailyBreakdown`: array de los 7 días de la semana ISO (`{date, steps}`), para el gráfico semanal de la app.

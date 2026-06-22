@@ -124,8 +124,28 @@ exports.refreshToken = catchAsync(async (req, res, next) => {
  * @route   GET /api/v1/auth/me
  * @access  Private
  */
+// Unambiguous charset (no 0/O/1/I) — code looks like "RUS-7K9QX2".
+const FRIEND_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+async function generateUniqueFriendCode() {
+  for (let attempt = 0; attempt < 8; attempt++) {
+    let body = '';
+    for (let i = 0; i < 6; i++) {
+      body += FRIEND_CODE_CHARS[Math.floor(Math.random() * FRIEND_CODE_CHARS.length)];
+    }
+    const code = `RUS-${body}`;
+    if (!(await User.exists({ friendCode: code }))) return code;
+  }
+  return `RUS-${Date.now().toString(36).toUpperCase().slice(-6)}`;
+}
+
 exports.getMe = catchAsync(async (req, res, next) => {
   const user = await User.findById(req.user._id).select('-__v');
+
+  // Lazily assign a friend code on first read (covers existing users + new ones).
+  if (user && !user.friendCode) {
+    user.friendCode = await generateUniqueFriendCode();
+    await user.save();
+  }
 
   successResponse(res, { user }, 'User retrieved successfully');
 });

@@ -143,6 +143,8 @@ Authorization: Bearer <your-jwt-token>
 
 **Endpoint:** `GET /users/search?query=john&limit=10`
 
+> `query` matchea `displayName`, `email` y **`friendCode`** (exacto, ej. `RUS-7K9QX2`). Cada usuario tiene un `friendCode` propio (se ve en `GET /auth/me`) para que lo compartan y los agreguen.
+
 **Response:** (200 OK)
 ```json
 {
