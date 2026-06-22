@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - `GET /steps/weekly-summary` ahora incluye `dailyBreakdown`: array de los 7 días de la semana ISO (`{date, steps}`), para el gráfico semanal de la app.
+- `GET /steps/today` y `GET /steps/weekly-summary` aceptan `?date=YYYY-MM-DD` (opcional): fecha **local del cliente** usada como referencia de "hoy"/"semana". Sin esto, un usuario en huso negativo que sincroniza de noche guardaba el día local pero el server lo buscaba en el día UTC siguiente → devolvía 0. La app móvil ahora manda su fecha local. Fallback: día UTC del server.
 
 ### Fixed
 

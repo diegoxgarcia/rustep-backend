@@ -316,9 +316,11 @@ Mantiene retrocompatibilidad. Para nuevas integraciones usar `POST /steps/sync`.
 
 ### Weekly Summary ⭐ (para la pantalla principal de la app)
 
-**Endpoint:** `GET /steps/weekly-summary`
+**Endpoint:** `GET /steps/weekly-summary?date=2026-06-21`
 
 Devuelve el resumen de la semana ISO actual: pasos acumulados, progreso hacia el umbral de torneos, racha de días activos.
+
+> **`date` (opcional, `YYYY-MM-DD`):** fecha **local del cliente**, usada como referencia de la semana. Se recomienda enviarla siempre desde apps móviles para evitar desfasajes de día por zona horaria (los docs diarios se guardan a medianoche UTC de la fecha local). Sin el parámetro, se usa el día UTC del servidor.
 
 **Response:** (200 OK)
 ```json
@@ -360,7 +362,9 @@ Devuelve el resumen de la semana ISO actual: pasos acumulados, progreso hacia el
 
 ### Get Today's Steps
 
-**Endpoint:** `GET /steps/today`
+**Endpoint:** `GET /steps/today?date=2026-06-21`
+
+> **`date` (opcional, `YYYY-MM-DD`):** fecha local del cliente como referencia de "hoy" (mismo motivo que weekly-summary). Sin el parámetro, usa el día UTC del servidor.
 
 **Response:** (200 OK)
 ```json

@@ -222,9 +222,13 @@ exports.submitSteps = catchAsync(async (req, res, next) => {
 exports.getWeeklySummary = catchAsync(async (req, res, next) => {
   const userId = req.user._id;
 
-  const now          = new Date();
+  // Reference date = the client's LOCAL date (?date=YYYY-MM-DD) anchored at UTC midnight, so it
+  // lines up with how daily docs are stored (localDate -> UTC midnight). Falls back to server now.
+  const now = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date || '')
+    ? new Date(`${req.query.date}T00:00:00.000Z`)
+    : new Date();
   const weekNumber   = stepsService.getWeekNumber(now);
-  const year         = now.getFullYear();
+  const year         = now.getUTCFullYear();
 
   // ISO week: Monday → Sunday
   const dayOfWeek    = now.getUTCDay() || 7; // 1=Mon … 7=Sun
@@ -298,8 +302,12 @@ exports.getWeeklySummary = catchAsync(async (req, res, next) => {
 // ─────────────────────────────────────────────────────────────
 exports.getTodaySteps = catchAsync(async (req, res, next) => {
   const userId  = req.user._id;
-  const today   = new Date(); today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+  // Use the client's LOCAL date (?date=YYYY-MM-DD) at UTC midnight to match how daily docs are
+  // stored; fall back to the server's UTC day.
+  const today = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date || '')
+    ? new Date(`${req.query.date}T00:00:00.000Z`)
+    : (() => { const d = new Date(); d.setUTCHours(0, 0, 0, 0); return d; })();
+  const tomorrow = new Date(today); tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
 
   const todayLogs = await StepsLog.find({ userId, startTime: { $gte: today, $lt: tomorrow } }).lean();
 
