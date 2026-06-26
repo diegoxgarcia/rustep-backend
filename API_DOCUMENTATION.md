@@ -697,6 +697,79 @@ Devuelve el resumen de la semana ISO actual: pasos acumulados, progreso hacia el
 
 ---
 
+## Groups Module
+
+Grupos de running (Postgres: `running_groups` + `group_members`). El `userId`/`creatorId` son ids de usuario de Mongo (string).
+
+### List Groups (browse)
+
+**Endpoint:** `GET /groups`
+
+Devuelve los grupos activos con conteo de miembros y si el usuario actual ya es miembro.
+
+**Response:** (200 OK)
+```json
+{
+  "success": true,
+  "data": {
+    "groups": [
+      {
+        "id": "uuid",
+        "name": "Runners BA",
+        "description": "Salidas de fin de semana",
+        "privacy": "PUBLIC",
+        "maxMembers": 50,
+        "imageUrl": null,
+        "memberCount": 12,
+        "isMember": false
+      }
+    ]
+  }
+}
+```
+
+`privacy`: `PUBLIC` | `PRIVATE` | `INVITE_ONLY`.
+
+### My Groups
+
+**Endpoint:** `GET /groups/mine` — mismos objetos que `GET /groups`, filtrados a los grupos del usuario.
+
+### Create Group
+
+**Endpoint:** `POST /groups`
+
+El creador queda como `OWNER`.
+
+**Request:**
+```json
+{ "name": "Runners BA", "description": "opcional", "privacy": "PUBLIC", "maxMembers": 50, "imageUrl": "https://..." }
+```
+`name` 3–100 chars (requerido); el resto opcional (`privacy` default `PUBLIC`, `maxMembers` default 50, 2–500).
+
+**Response:** (201 Created) `{ "data": { "group": { …, "memberCount": 1, "isMember": true } } }`
+
+### Join Group
+
+**Endpoint:** `POST /groups/:id/join`
+
+Solo grupos `PUBLIC` y no llenos. Errores: `404` (no existe), `403` (no es público), `400` (lleno / ya sos miembro).
+
+**Response:** (200 OK) `{ "data": { "group": { … } } }`
+
+### Leave Group
+
+**Endpoint:** `DELETE /groups/:id/leave`
+
+**Response:** (200 OK) `{ "data": null }`
+
+### Group Detail (con miembros)
+
+**Endpoint:** `GET /groups/:id`
+
+Igual que el objeto de grupo más `members: [{ userId, role, displayName, photoUrl }]` (nombres resueltos desde Mongo).
+
+---
+
 ## Error Responses
 
 All errors follow this format:

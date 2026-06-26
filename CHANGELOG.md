@@ -15,6 +15,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `StepsLog.source` (`'session' | 'daily'`, default `'session'`) + índice `{userId, source, startTime}` para el upsert.
 - `stepsService.creditStaminaForDailyDelta(userId, oldTotal, newTotal, refId)` — crédito exacto por incremento: `stamina(newTotal) − stamina(oldTotal)`, respetando el tope diario.
 
+### Added — Running groups
+
+- Módulo `groups` (usa las tablas existentes `running_groups` + `group_members`): `GET /groups` (explorar), `GET /groups/mine`, `POST /groups` (creador = OWNER), `POST /groups/:id/join` (solo público y no lleno), `DELETE /groups/:id/leave`, `GET /groups/:id` (detalle con nombres de miembros vía cross-DB Postgres↔Mongo).
+
 ### Added — Friend code
 
 - `User.friendCode`: código corto único y compartible (formato `RUS-XXXXXX`, charset sin caracteres ambiguos). Se genera **lazy** en `GET /auth/me` (cubre usuarios existentes y nuevos) y se devuelve en ese endpoint.
