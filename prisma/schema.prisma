@@ -12,13 +12,13 @@ datasource db {
 
 // Stamina Ledger - Transaction log for all stamina movements
 model StaminaLedger {
-  id          String   @id @default(uuid())
-  userId      String   @map("user_id") @db.VarChar(255)
-  amount      Int      // Positive for credits, negative for debits
+  id          String          @id @default(uuid())
+  userId      String          @map("user_id") @db.VarChar(255)
+  amount      Int // Positive for credits, negative for debits
   type        TransactionType
-  referenceId String?  @map("reference_id") @db.VarChar(255) // ID of related entity (steps_log, reward, etc)
-  description String?  @db.VarChar(500)
-  createdAt   DateTime @default(now()) @map("created_at")
+  referenceId String?         @map("reference_id") @db.VarChar(255) // ID of related entity (steps_log, reward, etc)
+  description String?         @db.VarChar(500)
+  createdAt   DateTime        @default(now()) @map("created_at")
 
   @@index([userId])
   @@index([createdAt])
@@ -27,23 +27,50 @@ model StaminaLedger {
 }
 
 enum TransactionType {
-  STEPS_CREDIT      // Stamina earned from steps
-  DAILY_BONUS       // Daily login bonus
-  WEEKLY_BONUS      // Weekly achievement bonus
-  FRIEND_BONUS      // Bonus from friend activities
-  REWARD_DEBIT      // Stamina spent on rewards
-  ADMIN_ADJUSTMENT  // Manual adjustment by admin
-  REFUND            // Refund from cancelled transaction
+  STEPS_CREDIT // Stamina earned from steps
+  DAILY_BONUS // Daily login bonus
+  WEEKLY_BONUS // Weekly achievement bonus
+  FRIEND_BONUS // Bonus from friend activities
+  REWARD_DEBIT // Stamina spent on rewards
+  ADMIN_ADJUSTMENT // Manual adjustment by admin
+  REFUND // Refund from cancelled transaction
+  DONATION_SENT // Stamina donated to a friend in recovery (debit on donor)
+  DONATION_RECEIVED // Stamina received from a friend while in recovery (credit on receiver)
+}
+
+// Recovery State - temporary self-declared "injured/recovering" status that lets a user
+// receive donated stamina from friends. One record per user (upserted). See GDD 11.5.
+model RecoveryState {
+  id              String         @id @default(uuid())
+  userId          String         @unique @map("user_id") @db.VarChar(255)
+  reason          RecoveryReason
+  active          Boolean        @default(true)
+  startedAt       DateTime       @default(now()) @map("started_at")
+  expiresAt       DateTime       @map("expires_at")
+  pausedForReview Boolean        @default(false) @map("paused_for_review") // set on a steps spike; blocks receiving until reviewed
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([active])
+  @@map("recovery_state")
+}
+
+enum RecoveryReason {
+  INJURED
+  SICK
+  HOSPITALIZED
+  RECOVERING
 }
 
 // Friendships - Social connections between users
 model Friendship {
-  id           String           @id @default(uuid())
-  requesterId  String           @map("requester_id") @db.VarChar(255)
-  addresseeId  String           @map("addressee_id") @db.VarChar(255)
-  status       FriendshipStatus @default(PENDING)
-  createdAt    DateTime         @default(now()) @map("created_at")
-  updatedAt    DateTime         @updatedAt @map("updated_at")
+  id          String           @id @default(uuid())
+  requesterId String           @map("requester_id") @db.VarChar(255)
+  addresseeId String           @map("addressee_id") @db.VarChar(255)
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
 
   @@unique([requesterId, addresseeId])
   @@index([requesterId])
@@ -61,18 +88,18 @@ enum FriendshipStatus {
 
 // Running Groups - Group challenges and activities
 model RunningGroup {
-  id          String   @id @default(uuid())
-  name        String   @db.VarChar(100)
-  description String?  @db.Text
-  creatorId   String   @map("creator_id") @db.VarChar(255)
+  id          String       @id @default(uuid())
+  name        String       @db.VarChar(100)
+  description String?      @db.Text
+  creatorId   String       @map("creator_id") @db.VarChar(255)
   privacy     GroupPrivacy @default(PUBLIC)
-  maxMembers  Int      @default(50) @map("max_members")
-  imageUrl    String?  @map("image_url") @db.VarChar(500)
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  maxMembers  Int          @default(50) @map("max_members")
+  imageUrl    String?      @map("image_url") @db.VarChar(500)
+  isActive    Boolean      @default(true) @map("is_active")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
 
-  members     GroupMember[]
+  members GroupMember[]
 
   @@index([creatorId])
   @@index([isActive])
@@ -87,13 +114,13 @@ enum GroupPrivacy {
 
 // Group Members - Members of running groups
 model GroupMember {
-  groupId    String       @map("group_id")
-  userId     String       @map("user_id") @db.VarChar(255)
-  role       MemberRole   @default(MEMBER)
-  joinedAt   DateTime     @default(now()) @map("joined_at")
-  isActive   Boolean      @default(true) @map("is_active")
+  groupId  String     @map("group_id")
+  userId   String     @map("user_id") @db.VarChar(255)
+  role     MemberRole @default(MEMBER)
+  joinedAt DateTime   @default(now()) @map("joined_at")
+  isActive Boolean    @default(true) @map("is_active")
 
-  group      RunningGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  group RunningGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
   @@id([groupId, userId])
   @@index([userId])
@@ -109,14 +136,14 @@ enum MemberRole {
 
 // Rankings - Weekly leaderboards
 model Ranking {
-  id         String       @id @default(uuid())
-  userId     String       @map("user_id") @db.VarChar(255)
+  id         String          @id @default(uuid())
+  userId     String          @map("user_id") @db.VarChar(255)
   category   RankingCategory
-  score      Int          @default(0)
-  weekNumber Int          @map("week_number")
+  score      Int             @default(0)
+  weekNumber Int             @map("week_number")
   year       Int
-  rank       Int?         // Calculated rank
-  updatedAt  DateTime     @updatedAt @map("updated_at")
+  rank       Int? // Calculated rank
+  updatedAt  DateTime        @updatedAt @map("updated_at")
 
   @@unique([userId, category, weekNumber, year])
   @@index([category, weekNumber, year, score])
@@ -125,26 +152,26 @@ model Ranking {
 }
 
 enum RankingCategory {
-  WEEKLY_STEPS      // Total steps in a week
-  WEEKLY_STAMINA    // Total stamina earned in a week
-  WEEKLY_SESSIONS   // Number of running sessions in a week
-  ALL_TIME_STEPS    // Career total steps
+  WEEKLY_STEPS // Total steps in a week
+  WEEKLY_STAMINA // Total stamina earned in a week
+  WEEKLY_SESSIONS // Number of running sessions in a week
+  ALL_TIME_STEPS // Career total steps
 }
 
 // Rewards Catalog - Available rewards to redeem
 model Reward {
-  id            String   @id @default(uuid())
-  name          String   @db.VarChar(200)
-  description   String?  @db.Text
-  staminaCost   Int      @map("stamina_cost")
-  category      String   @db.VarChar(50)
-  imageUrl      String?  @map("image_url") @db.VarChar(500)
-  isActive      Boolean  @default(true) @map("is_active")
-  stock         Int?     // Null = unlimited
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  id          String   @id @default(uuid())
+  name        String   @db.VarChar(200)
+  description String?  @db.Text
+  staminaCost Int      @map("stamina_cost")
+  category    String   @db.VarChar(50)
+  imageUrl    String?  @map("image_url") @db.VarChar(500)
+  isActive    Boolean  @default(true) @map("is_active")
+  stock       Int? // Null = unlimited
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
-  redemptions   RewardRedemption[]
+  redemptions RewardRedemption[]
 
   @@index([isActive])
   @@index([category])
@@ -153,16 +180,16 @@ model Reward {
 
 // Reward Redemptions - User reward claims
 model RewardRedemption {
-  id          String   @id @default(uuid())
-  userId      String   @map("user_id") @db.VarChar(255)
-  rewardId    String   @map("reward_id")
-  staminaCost Int      @map("stamina_cost")
+  id          String           @id @default(uuid())
+  userId      String           @map("user_id") @db.VarChar(255)
+  rewardId    String           @map("reward_id")
+  staminaCost Int              @map("stamina_cost")
   status      RedemptionStatus @default(PENDING)
-  redeemedAt  DateTime @default(now()) @map("redeemed_at")
-  fulfilledAt DateTime? @map("fulfilled_at")
-  notes       String?  @db.Text
+  redeemedAt  DateTime         @default(now()) @map("redeemed_at")
+  fulfilledAt DateTime?        @map("fulfilled_at")
+  notes       String?          @db.Text
 
-  reward      Reward   @relation(fields: [rewardId], references: [id])
+  reward Reward @relation(fields: [rewardId], references: [id])
 
   @@index([userId])
   @@index([rewardId])

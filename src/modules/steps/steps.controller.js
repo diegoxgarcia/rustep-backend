@@ -5,6 +5,7 @@ const catchAsync = require('../../utils/catchAsync');
 const AppError = require('../../utils/appError');
 const { successResponse } = require('../../utils/response');
 const stepsService = require('./steps.service');
+const { reviewRecoveryStepSpike } = require('../stamina/recovery.service');
 
 // ─────────────────────────────────────────────────────────────
 // Internal helper: process a single session and return result
@@ -139,6 +140,7 @@ exports.syncDailySteps = catchAsync(async (req, res, next) => {
   let daysProcessed = 0;
   let stepsAccepted = 0;
   let staminaCredited = 0;
+  let maxDaySteps = 0;
   const warnings = [];
 
   for (const day of days) {
@@ -150,6 +152,7 @@ exports.syncDailySteps = catchAsync(async (req, res, next) => {
       warnings.push('IMPLAUSIBLE_DAILY_STEPS');
       continue;
     }
+    if (steps > maxDaySteps) maxDaySteps = steps;
 
     const dayEnd = new Date(dayStart);
     dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
@@ -186,6 +189,10 @@ exports.syncDailySteps = catchAsync(async (req, res, next) => {
     stepsAccepted += delta;
     staminaCredited += credited;
   }
+
+  // Abuse guard: if the user is in recovery and any day crosses the threshold, pause their
+  // ability to receive donations and raise a manual-review signal (never blocks earning).
+  await reviewRecoveryStepSpike(userId, maxDaySteps);
 
   successResponse(res, {
     sessionsProcessed: daysProcessed,

@@ -50,4 +50,38 @@ router.post(
   staminaController.spendStamina
 );
 
+// ── Donation & recovery (GDD 11.5) ──────────────────────────────
+
+// My recovery state + monthly cap usage
+router.get('/recovery', staminaController.getRecovery);
+
+// Activate / renew my recovery state
+router.post(
+  '/recovery',
+  [
+    body('reason')
+      .isIn(['injured', 'sick', 'hospitalized', 'recovering'])
+      .withMessage('reason must be one of: injured, sick, hospitalized, recovering')
+  ],
+  validate,
+  staminaController.startRecovery
+);
+
+// End my recovery state
+router.delete('/recovery', staminaController.endRecovery);
+
+// Friends currently in recovery who can receive donations
+router.get('/recovery/friends', staminaController.getRecoveringFriends);
+
+// Donate stamina to a friend in recovery
+router.post(
+  '/donate',
+  [
+    body('toUserId').isString().notEmpty().withMessage('toUserId is required'),
+    body('amount').isInt({ min: 1 }).withMessage('Amount must be a positive integer')
+  ],
+  validate,
+  staminaController.donate
+);
+
 module.exports = router;

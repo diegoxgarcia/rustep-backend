@@ -46,7 +46,11 @@ module.exports = {
     perThousandSteps: parseInt(process.env.STAMINA_PER_1K_STEPS, 10) || 10,
     maxPerDay: parseInt(process.env.MAX_STAMINA_PER_DAY, 10) || 100,
     fraudThresholdConfidence: parseFloat(process.env.FRAUD_THRESHOLD_CONFIDENCE) || 0.4,
-    fraudSuspensionDays: parseInt(process.env.FRAUD_SUSPENSION_DAYS, 10) || 7
+    fraudSuspensionDays: parseInt(process.env.FRAUD_SUSPENSION_DAYS, 10) || 7,
+    // Donation & recovery (see GDD 11.5)
+    donationMonthlyCap: parseInt(process.env.STAMINA_DONATION_MONTHLY_CAP, 10) || 300,
+    recoveryDurationDays: parseInt(process.env.RECOVERY_DURATION_DAYS, 10) || 7,
+    recoveryStepsReviewThreshold: parseInt(process.env.RECOVERY_STEPS_REVIEW_THRESHOLD, 10) || 2000
   },
 
   // Logging
