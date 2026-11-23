@@ -36,6 +36,27 @@ enum TransactionType {
   REFUND // Refund from cancelled transaction
   DONATION_SENT // Stamina donated to a friend in recovery (debit on donor)
   DONATION_RECEIVED // Stamina received from a friend while in recovery (credit on receiver)
+  RACE_DEBIT // Stamina spent with turbo in a ranked Rustep Run race (referenceId = raceId)
+}
+
+// Game Races - Ranked races played in Rustep Run (Unreal). One row per race; the
+// client-generated raceId makes POST /game/races idempotent (retries never double-debit).
+// Leaderboards are derived from the best finished time per user and distance.
+model GameRace {
+  id               String   @id @default(uuid())
+  raceId           String   @unique @map("race_id") @db.VarChar(64)
+  userId           String   @map("user_id") @db.VarChar(255)
+  distance         String   @db.VarChar(8) // D3K | D5K | D10K | D21K | D42K
+  finished         Boolean // false = died before the finish line (no record)
+  timeSec          Float?   @map("time_sec") // only when finished
+  coins            Int      @default(0)
+  staminaRequested Int      @default(0) @map("stamina_requested") // what the game reported as used
+  staminaDebited   Int      @default(0) @map("stamina_debited") // clamped to the balance
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@index([userId, distance])
+  @@index([distance, finished, timeSec])
+  @@map("game_races")
 }
 
 // Recovery State - temporary self-declared "injured/recovering" status that lets a user

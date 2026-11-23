@@ -18,6 +18,7 @@ const staminaRoutes = require('./modules/stamina/stamina.routes');
 const friendsRoutes = require('./modules/friends/friends.routes');
 const rankingsRoutes = require('./modules/rankings/rankings.routes');
 const groupsRoutes = require('./modules/groups/groups.routes');
+const gameRoutes = require('./modules/game/game.routes'); // Rustep Run (Unreal) — new endpoints only
 
 const app = express();
 
@@ -72,6 +73,7 @@ app.use(`${API_PREFIX}/stamina`, staminaRoutes);
 app.use(`${API_PREFIX}/friends`, friendsRoutes);
 app.use(`${API_PREFIX}/rankings`, rankingsRoutes);
 app.use(`${API_PREFIX}/groups`, groupsRoutes);
+app.use(`${API_PREFIX}/game`, gameRoutes);
 
 // Welcome route
 app.get('/', (req, res) => {
