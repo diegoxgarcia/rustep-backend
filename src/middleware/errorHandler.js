@@ -6,14 +6,6 @@ const errorHandler = (err, req, res, next) => {
   error.message = err.message;
   error.statusCode = err.statusCode || 500;
 
-  // Log error
-  logger.error(`Error: ${error.message}`, {
-    statusCode: error.statusCode,
-    stack: err.stack,
-    path: req.path,
-    method: req.method
-  });
-
   // Mongoose bad ObjectId
   if (err.name === 'CastError') {
     const message = 'Resource not found';
@@ -45,8 +37,8 @@ const errorHandler = (err, req, res, next) => {
     error = new AppError(message, 401);
   }
 
-  // Prisma errors
-  if (err.code && err.code.startsWith('P')) {
+  // Prisma errors (Mongo uses numeric codes like 11000, so check the type first)
+  if (typeof err.code === 'string' && err.code.startsWith('P')) {
     switch (err.code) {
       case 'P2002':
         const target = err.meta?.target || 'field';
@@ -58,6 +50,19 @@ const errorHandler = (err, req, res, next) => {
       default:
         error = new AppError('Database error', 500);
     }
+  }
+
+  // Log: only real server failures (5xx) are errors, with stack. Client responses
+  // (401 without token, 404, validation…) are normal traffic → one-line warn.
+  if (error.statusCode >= 500) {
+    logger.error(`Error: ${err.message}`, {
+      statusCode: error.statusCode,
+      stack: err.stack,
+      path: req.path,
+      method: req.method
+    });
+  } else {
+    logger.warn(`${error.statusCode} ${req.method} ${req.path}: ${error.message}`);
   }
 
   // Send error response
